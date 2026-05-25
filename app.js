@@ -58,6 +58,7 @@ let currentView = "dashboard";
 let currentEmployee = employeesSeed[0].name;
 let saveTimer = null;
 let remoteReady = false;
+const apiUrl = window.TRACKER_API_URL || "/api/data";
 
 function loadState() {
   const stored = localStorage.getItem(storeKey);
@@ -86,7 +87,7 @@ function saveState() {
 
 async function loadRemoteState() {
   try {
-    const response = await fetch("/api/data", { cache: "no-store" });
+    const response = await fetch(apiUrl, { cache: "no-store" });
     if (!response.ok) return false;
     const parsed = await response.json();
     if (parsed.programs || parsed.employees || parsed.goals) {
@@ -107,9 +108,9 @@ async function loadRemoteState() {
 
 async function saveRemoteState() {
   try {
-    await fetch("/api/data", {
+    await fetch(apiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(state, null, 2)
     });
   } catch {
