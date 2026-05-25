@@ -59,6 +59,11 @@ let currentEmployee = employeesSeed[0].name;
 let saveTimer = null;
 let remoteReady = false;
 const apiUrl = window.TRACKER_API_URL || "/api/data";
+let dashboardFilters = {
+  employee: "כל העובדים",
+  meetingDate: "",
+  month: ""
+};
 
 function loadState() {
   const stored = localStorage.getItem(storeKey);
@@ -174,8 +179,8 @@ function goalsForProgram(program) {
   return state.goals.filter(goal => goal.program === program.name);
 }
 
-function programProgress(program) {
-  return avg(goalsForProgram(program).map(goal => goal.progress));
+function programProgress(program, goals = state.goals) {
+  return avg(goals.filter(goal => goal.program === program.name).map(goal => goal.progress));
 }
 
 function latestGoal(program) {
@@ -211,7 +216,7 @@ function setView(view, employeeName = currentEmployee) {
 
 function render() {
   document.getElementById("todayLabel").textContent = `תאריך עדכון: ${new Date().toLocaleDateString("he-IL")}`;
-  document.getElementById("storageLabel").textContent = remoteReady ? "שמירה: קובץ בתיקייה" : "שמירה: דפדפן מקומי";
+  document.getElementById("storageLabel").textContent = remoteReady ? "שמירה: מאגר מרכזי" : "שמירה: דפדפן מקומי";
   renderNav();
   document.querySelectorAll(".view").forEach(view => view.classList.remove("active"));
   if (currentView === "dashboard") renderDashboard();
@@ -262,26 +267,101 @@ function kpi(title, value, style) {
 function renderDashboard() {
   const view = document.getElementById("viewDashboard");
   view.className = "view active";
-  const total = state.programs.length;
-  const inProgress = state.programs.filter(p => p.status === "בתהליך").length;
-  const done = state.programs.filter(p => p.status === "הושלם").length;
-  const risk = state.programs.filter(p => p.status === "בעיכוב" || p.status === "בסיכון").length;
-  const progress = avg(state.programs.map(programProgress));
+  const filteredGoals = getDashboardGoals();
+  const scopedPrograms = getDashboardPrograms(filteredGoals);
+  const hasGoalFilter = dashboardFilters.employee !== "כל העובדים" || dashboardFilters.meetingDate || dashboardFilters.month;
+  const total = scopedPrograms.length;
+  const inProgress = scopedPrograms.filter(p => p.status === "בתהליך").length;
+  const done = scopedPrograms.filter(p => p.status === "הושלם").length;
+  const risk = scopedPrograms.filter(p => p.status === "בעיכוב" || p.status === "בסיכון").length;
+  const progress = hasGoalFilter ? avg(filteredGoals.map(goal => goal.progress)) : avg(scopedPrograms.map(program => programProgress(program)));
   view.innerHTML = "";
   view.append(
     pageHeader("דשבורד ניהול תכניות ופרויקטים", `תאריך עדכון: ${new Date().toLocaleDateString("he-IL")}`),
+    dashboardFilterPanel(),
     el("div", { class: "kpi-grid" }, [
-      kpi("סה\"כ תכניות/פרויקטים", total, "blue"),
+      kpi(hasGoalFilter ? "תכניות במסנן" : "סה\"כ תכניות/פרויקטים", total, "blue"),
       kpi("בתהליך", inProgress, "yellow"),
       kpi("הושלם", done, "green"),
       kpi("בעיכוב/בסיכון", risk, "red"),
       kpi("התקדמות ממוצעת", formatPercent(progress), "navy")
     ]),
     el("div", { class: "grid-two" }, [
-      panel("התפלגות סטטוסים", statusDistributionTable()),
-      panel("התקדמות לפי עובד", employeeProgressTable())
+      panel("התפלגות סטטוסים", statusDistributionTable(scopedPrograms)),
+      panel("התקדמות לפי עובד", employeeProgressTable(filteredGoals, scopedPrograms, hasGoalFilter))
     ])
   );
+}
+
+function getDashboardGoals() {
+  return state.goals.filter(goal => {
+    const byEmployee = dashboardFilters.employee === "כל העובדים" || goal.employee === dashboardFilters.employee;
+    const byDate = !dashboardFilters.meetingDate || goal.meetingDate === dashboardFilters.meetingDate;
+    const byMonth = !dashboardFilters.month || String(goal.meetingDate || "").startsWith(dashboardFilters.month);
+    return byEmployee && byDate && byMonth;
+  });
+}
+
+function getDashboardPrograms(filteredGoals) {
+  if (dashboardFilters.meetingDate || dashboardFilters.month) {
+    const names = new Set(filteredGoals.map(goal => goal.program));
+    return state.programs.filter(program => names.has(program.name));
+  }
+  if (dashboardFilters.employee !== "כל העובדים") {
+    return state.programs.filter(program => program.owner === dashboardFilters.employee);
+  }
+  return state.programs;
+}
+
+function dashboardFilterPanel() {
+  const dates = [...new Set(state.goals.map(goal => goal.meetingDate).filter(Boolean))].sort().reverse();
+  const months = [...new Set(state.goals.map(goal => String(goal.meetingDate || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  const body = el("div", { class: "dashboard-filters" }, [
+    el("label", {}, [
+      el("span", { text: "עובד" }),
+      selectControl("employee", ["כל העובדים", ...state.employees.map(employee => employee.name)], dashboardFilters.employee)
+    ]),
+    el("label", {}, [
+      el("span", { text: "תאריך פגישה" }),
+      selectControl("meetingDate", ["", ...dates], dashboardFilters.meetingDate, "כל התאריכים", formatDate)
+    ]),
+    el("label", {}, [
+      el("span", { text: "חודש" }),
+      selectControl("month", ["", ...months], dashboardFilters.month, "כל החודשים", formatMonth)
+    ]),
+    el("div", { class: "toolbar" }, [
+      el("button", {
+        class: "secondary",
+        text: "נקה סינון",
+        onclick: () => {
+          dashboardFilters = { employee: "כל העובדים", meetingDate: "", month: "" };
+          renderDashboard();
+        }
+      })
+    ])
+  ]);
+  body.querySelectorAll("[data-dashboard-filter]").forEach(input => {
+    input.addEventListener("change", () => {
+      dashboardFilters[input.dataset.dashboardFilter] = input.value;
+      renderDashboard();
+    });
+  });
+  return panel("סינון דשבורד", body);
+}
+
+function selectControl(field, options, selected, emptyLabel, formatter = value => value) {
+  const select = el("select", { "data-dashboard-filter": field });
+  select.innerHTML = options.map(value => {
+    const label = value === "" && emptyLabel ? emptyLabel : formatter(value);
+    return `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  }).join("");
+  return select;
+}
+
+function formatMonth(value) {
+  if (!value) return "";
+  const [year, month] = value.split("-");
+  return `${month}/${year}`;
 }
 
 function panel(title, content) {
@@ -291,14 +371,18 @@ function panel(title, content) {
   ]);
 }
 
-function statusDistributionTable() {
-  const rows = statusOptions.map(status => [status, state.programs.filter(program => program.status === status).length]);
+function statusDistributionTable(programs = state.programs) {
+  const rows = statusOptions.map(status => [status, programs.filter(program => program.status === status).length]);
   return simpleTable(["סטטוס", "כמות"], rows);
 }
 
-function employeeProgressTable() {
-  const rows = state.employees.map(employee => {
-    const programs = state.programs.filter(program => program.owner === employee.name);
+function employeeProgressTable(filteredGoals = state.goals, scopedPrograms = state.programs, hasGoalFilter = false) {
+  const employees = dashboardFilters.employee === "כל העובדים"
+    ? state.employees
+    : state.employees.filter(employee => employee.name === dashboardFilters.employee);
+  const rows = employees.map(employee => {
+    const programs = scopedPrograms.filter(program => program.owner === employee.name);
+    const employeeGoals = filteredGoals.filter(goal => goal.employee === employee.name);
     const delayed = programs.filter(program => ["בעיכוב", "בסיכון"].includes(program.status)).length;
     return [
       employee.name,
@@ -306,7 +390,7 @@ function employeeProgressTable() {
       programs.filter(program => program.status === "הושלם").length,
       programs.filter(program => program.status === "בתהליך").length,
       delayed,
-      formatPercent(avg(programs.map(programProgress))),
+      formatPercent(hasGoalFilter ? avg(employeeGoals.map(goal => goal.progress)) : avg(programs.map(program => programProgress(program)))),
       `<button class="link-button" data-employee="${escapeHtml(employee.name)}">פתח</button>`
     ];
   });
