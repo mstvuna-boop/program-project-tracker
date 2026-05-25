@@ -377,6 +377,28 @@ td textarea:focus,
   min-height: 40px;
 }
 
+.dashboard-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.dashboard-filters label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard-filters select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: #fff;
+  color: var(--ink);
+}
+
 .meeting-select {
   background: #ffff00;
   border: 1px solid #c8b300;

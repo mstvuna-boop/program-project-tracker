@@ -179,8 +179,11 @@ function goalsForProgram(program) {
   return state.goals.filter(goal => goal.program === program.name);
 }
 
-function programProgress(program, goals = state.goals) {
-  return avg(goals.filter(goal => goal.program === program.name).map(goal => goal.progress));
+function programProgress(program, goals = state.goals, employeeName = "") {
+  const sourceGoals = Array.isArray(goals) ? goals : state.goals;
+  return avg(sourceGoals
+    .filter(goal => goal.program === program.name && (!employeeName || goal.employee === employeeName))
+    .map(goal => goal.progress));
 }
 
 function latestGoal(program) {
@@ -592,7 +595,7 @@ function renderEmployee(name) {
     el("div", { class: "kpi-grid" }, [
       kpi("תכניות", employeePrograms.length, "blue"),
       kpi("בעיכוב", employeePrograms.filter(p => ["בעיכוב", "בסיכון"].includes(p.status)).length, "red"),
-      kpi("% התקדמות", formatPercent(avg(employeePrograms.map(programProgress))), "navy")
+      kpi("% התקדמות", formatPercent(avg(employeePrograms.map(program => programProgress(program, employeeGoals, name)))), "navy")
     ]),
     employeeMeetingPanel(name, dates, selectedDate, shownGoals),
     nextWeekPanel(name)
