@@ -1,0 +1,14 @@
+{
+  "name": "program-project-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hebrew RTL program, project, employee, and weekly goals tracker.",
+  "main": "serve-local.js",
+  "scripts": {
+    "start": "node serve-local.js",
+    "check": "node --check app.js && node --check serve-local.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

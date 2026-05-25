@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>מעקב תכניות ופרויקטים</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">ת</div>
+      <div>
+        <h1>מעקב תכניות ופרויקטים</h1>
+        <p id="todayLabel"></p>
+        <p id="storageLabel"></p>
+      </div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="sidebar-actions">
+      <button id="exportBtn" class="secondary">ייצוא JSON</button>
+      <label class="secondary file-label">
+        ייבוא JSON
+        <input id="importFile" type="file" accept="application/json">
+      </label>
+      <button id="resetBtn" class="danger">איפוס נתונים</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="viewDashboard" class="view"></section>
+    <section id="viewPrograms" class="view"></section>
+    <section id="viewEmployees" class="view"></section>
+    <section id="viewGoals" class="view"></section>
+    <section id="viewEmployee" class="view"></section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <template id="iconOpen">
+    <span aria-hidden="true">↗</span>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
