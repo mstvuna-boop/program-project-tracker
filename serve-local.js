@@ -6,6 +6,7 @@ const root = __dirname;
 const dataDir = process.env.DATA_DIR || path.join(root, "data");
 const dataFile = path.join(dataDir, "tracker-data.json");
 const port = Number(process.argv[2] || process.env.PORT || 4180);
+const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL || "";
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -15,6 +16,10 @@ const types = {
 
 http.createServer((request, response) => {
   if (request.url === "/api/data" && request.method === "GET") {
+    if (googleScriptUrl) {
+      proxyGoogleScript_(response);
+      return;
+    }
     fs.readFile(dataFile, "utf8", (error, data) => {
       response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       response.end(error ? "{}" : data);
@@ -31,6 +36,10 @@ http.createServer((request, response) => {
     request.on("end", () => {
       try {
         JSON.parse(body);
+        if (googleScriptUrl) {
+          saveGoogleScript_(body, response);
+          return;
+        }
         fs.mkdir(dataDir, { recursive: true }, mkdirError => {
           if (mkdirError) {
             response.writeHead(500);
@@ -76,3 +85,31 @@ http.createServer((request, response) => {
 }).listen(port, "0.0.0.0", () => {
   console.log(`http://0.0.0.0:${port}`);
 });
+
+async function proxyGoogleScript_(response) {
+  try {
+    const result = await fetch(googleScriptUrl, { cache: "no-store" });
+    const text = await result.text();
+    response.writeHead(result.ok ? 200 : 502, { "Content-Type": "application/json; charset=utf-8" });
+    response.end(text || "{}");
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ ok: false, error: String(error) }));
+  }
+}
+
+async function saveGoogleScript_(body, response) {
+  try {
+    const result = await fetch(googleScriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body
+    });
+    const text = await result.text();
+    response.writeHead(result.ok ? 200 : 502, { "Content-Type": "application/json; charset=utf-8" });
+    response.end(text || "{\"ok\":true}");
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ ok: false, error: String(error) }));
+  }
+}
