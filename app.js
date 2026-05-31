@@ -588,15 +588,20 @@ function renderEmployee(name) {
   const dates = [...new Set(employeeGoals.map(goal => goal.meetingDate).filter(Boolean))].sort().reverse();
   const selectedDate = sessionStorage.getItem(`date:${name}`) || "כל הפגישות";
   const shownGoals = selectedDate === "כל הפגישות" ? employeeGoals : employeeGoals.filter(goal => goal.meetingDate === selectedDate);
+  const shownProgramNames = new Set(shownGoals.map(goal => goal.program));
+  const shownPrograms = selectedDate === "כל הפגישות"
+    ? employeePrograms
+    : employeePrograms.filter(program => shownProgramNames.has(program.name));
   view.innerHTML = "";
   view.append(
     pageHeader(name, `תאריך פגישה: ${new Date().toLocaleDateString("he-IL")}`, [
       el("button", { text: "הורד אקסל לשבוע הקרוב", onclick: () => downloadEmployeeExcel(name) })
     ]),
     el("div", { class: "kpi-grid" }, [
-      kpi("תכניות", employeePrograms.length, "blue"),
-      kpi("בעיכוב", employeePrograms.filter(p => ["בעיכוב", "בסיכון"].includes(p.status)).length, "red"),
-      kpi("% התקדמות", formatPercent(avg(employeePrograms.map(program => programProgress(program, employeeGoals, name)))), "navy")
+      kpi("תכניות", shownPrograms.length, "blue"),
+      kpi("יעדים", shownGoals.length, "yellow"),
+      kpi("בעיכוב", shownPrograms.filter(p => ["בעיכוב", "בסיכון"].includes(p.status)).length, "red"),
+      kpi("% התקדמות", formatPercent(avg(shownGoals.map(goal => goal.progress))), "navy")
     ]),
     employeeMeetingPanel(name, dates, selectedDate, shownGoals),
     nextWeekPanel(name)
