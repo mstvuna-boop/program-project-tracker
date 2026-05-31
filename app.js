@@ -277,7 +277,7 @@ function renderDashboard() {
   const inProgress = scopedPrograms.filter(p => p.status === "בתהליך").length;
   const done = scopedPrograms.filter(p => p.status === "הושלם").length;
   const risk = scopedPrograms.filter(p => p.status === "בעיכוב" || p.status === "בסיכון").length;
-  const progress = hasGoalFilter ? avg(filteredGoals.map(goal => goal.progress)) : avg(scopedPrograms.map(program => programProgress(program)));
+  const progress = avg(filteredGoals.map(goal => goal.progress));
   view.innerHTML = "";
   view.append(
     pageHeader("דשבורד ניהול תכניות ופרויקטים", `תאריך עדכון: ${new Date().toLocaleDateString("he-IL")}`),
@@ -287,7 +287,7 @@ function renderDashboard() {
       kpi("בתהליך", inProgress, "yellow"),
       kpi("הושלם", done, "green"),
       kpi("בעיכוב/בסיכון", risk, "red"),
-      kpi("התקדמות ממוצעת", formatPercent(progress), "navy")
+      kpi("התקדמות יעדים ממוצעת", formatPercent(progress), "navy")
     ]),
     el("div", { class: "grid-two" }, [
       panel("התפלגות סטטוסים", statusDistributionTable(scopedPrograms)),
@@ -379,7 +379,7 @@ function statusDistributionTable(programs = state.programs) {
   return simpleTable(["סטטוס", "כמות"], rows);
 }
 
-function employeeProgressTable(filteredGoals = state.goals, scopedPrograms = state.programs, hasGoalFilter = false) {
+function employeeProgressTable(filteredGoals = state.goals, scopedPrograms = state.programs) {
   const employees = dashboardFilters.employee === "כל העובדים"
     ? state.employees
     : state.employees.filter(employee => employee.name === dashboardFilters.employee);
@@ -393,7 +393,7 @@ function employeeProgressTable(filteredGoals = state.goals, scopedPrograms = sta
       programs.filter(program => program.status === "הושלם").length,
       programs.filter(program => program.status === "בתהליך").length,
       delayed,
-      formatPercent(hasGoalFilter ? avg(employeeGoals.map(goal => goal.progress)) : avg(programs.map(program => programProgress(program)))),
+      formatPercent(avg(employeeGoals.map(goal => goal.progress))),
       `<button class="link-button" data-employee="${escapeHtml(employee.name)}">פתח</button>`
     ];
   });
@@ -615,9 +615,41 @@ function employeeMeetingPanel(name, dates, selectedDate, goals) {
       el("strong", { text: "בחר תאריך פגישה לסקירה:" }),
       select
     ]),
-    goalsTable(goals, true)
+    goalsTable(goals, true),
+    readableMeetingReport(name, selectedDate, goals)
   ]);
   return panel("יעדים של הפגישה הנבחרת - הזן ציון 1-10", body);
+}
+
+function readableMeetingReport(name, selectedDate, goals) {
+  const reportGoals = goals.filter(goal => goal.goal || goal.notes || goal.score || goal.support);
+  const title = selectedDate === "כל הפגישות"
+    ? `דוח קריאה - כל הפגישות של ${name}`
+    : `דוח קריאה - פגישה ${formatDate(selectedDate)}`;
+  if (!reportGoals.length) {
+    return el("section", { class: "goal-report" }, [
+      el("h3", { text: title }),
+      el("p", { class: "muted-line", text: "אין יעדים להצגה בדוח." })
+    ]);
+  }
+  return el("section", { class: "goal-report" }, [
+    el("h3", { text: title }),
+    ...reportGoals.map((goal, index) => el("article", { class: "goal-report-item" }, [
+      el("div", { class: "goal-report-head" }, [
+        el("strong", { text: `${index + 1}. ${goal.program || "ללא תכנית"}` }),
+        el("span", { text: `${goal.score || "-"} | ${formatPercent(goal.progress || 0)}` })
+      ]),
+      el("p", { text: goal.goal || "" }),
+      goal.notes ? el("div", { class: "goal-report-notes" }, [
+        el("strong", { text: "הערות מהפגישה" }),
+        el("p", { text: goal.notes })
+      ]) : document.createTextNode(""),
+      goal.support ? el("div", { class: "goal-report-notes" }, [
+        el("strong", { text: "מכשולים / תמיכה נדרשת" }),
+        el("p", { text: goal.support })
+      ]) : document.createTextNode("")
+    ]))
+  ]);
 }
 
 function nextWeekPanel(name) {

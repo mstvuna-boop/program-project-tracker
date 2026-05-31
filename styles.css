@@ -419,6 +419,54 @@ td textarea:focus,
   border-radius: 8px;
 }
 
+.goal-report {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.goal-report h3 {
+  margin: 0 0 12px;
+  color: var(--blue);
+  font-size: 18px;
+}
+
+.goal-report-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.goal-report-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--blue);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.goal-report-item p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.goal-report-notes {
+  background: #f6f8fb;
+  border: 1px solid #e5ebf2;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.muted-line {
+  color: var(--muted);
+}
+
 .hidden-helper {
   display: none;
 }
