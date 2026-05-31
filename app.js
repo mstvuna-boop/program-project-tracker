@@ -457,9 +457,10 @@ function programsTable() {
 }
 
 function progressBar(value) {
-  const percent = Math.max(0, Math.min(1, Number(value) || 0));
-  const color = percent < .34 ? "#ffc7ce" : percent < .75 ? "#ffeb9c" : "#c6efce";
-  return `<div class="progress-track"><div class="progress-fill" style="width:${percent * 100}%;background:${color}">${formatPercent(percent)}</div></div>`;
+  const actual = Math.max(0, Number(value) || 0);
+  const width = Math.min(1, actual);
+  const color = actual < .34 ? "#ffc7ce" : actual < .75 ? "#ffeb9c" : "#c6efce";
+  return `<div class="progress-track"><div class="progress-fill" style="width:${width * 100}%;background:${color}">${formatPercent(actual)}</div></div>`;
 }
 
 function updateProgram(event) {
@@ -525,7 +526,7 @@ function goalsTable(goals, editable) {
       <td><select data-goal="${index}" data-field="program">${optionList(state.programs.map(p => p.name), goal.program)}</select></td>
       <td><textarea data-goal="${index}" data-field="goal">${escapeHtml(goal.goal || "")}</textarea></td>
       <td><select data-goal="${index}" data-field="goalStatus">${optionList(goalStatusOptions, goal.goalStatus)}</select></td>
-      <td><input type="number" min="1" max="10" value="${escapeHtml(goal.score || "")}" data-goal="${index}" data-field="score"></td>
+      <td><input type="number" min="0" step="0.1" value="${escapeHtml(goal.score || "")}" data-goal="${index}" data-field="score"></td>
       <td class="progress-cell">${progressBar(goal.progress || 0)}</td>
       <td><textarea data-goal="${index}" data-field="notes">${escapeHtml(goal.notes || "")}</textarea></td>
       <td><textarea data-goal="${index}" data-field="support">${escapeHtml(goal.support || "")}</textarea></td>
@@ -573,7 +574,7 @@ function updateGoal(event) {
   state.goals[index][field] = event.target.value;
   if (field === "score") {
     const score = Number(event.target.value);
-    state.goals[index].progress = score ? Math.max(0, Math.min(10, score)) / 10 : 0;
+    state.goals[index].progress = score ? Math.max(0, score) / 10 : 0;
   }
   saveState();
   render();
